@@ -10,15 +10,13 @@ from pydantic import (
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params, Page
-from fastapi_pagination.ext.sqlmodel import paginate
 
 from sqlmodel import select
-from app.models.base import UUIDBaseModel
 
 from app.api.deps import SessionDep, OptionalUserDep, CurrentUserDep
 from app.rag.chat_config import ChatEngineConfig
 from app.repositories import chat_repo
-from app.models import Chat, ChatUpdate, ChatFilters, User
+from app.models import Chat, ChatUpdate, ChatFilters
 from app.rag.chat import (
     ChatService,
     ChatEvent,
@@ -155,29 +153,6 @@ def list_chats(
 ) -> Page[Chat]:
     browser_id = request.state.browser_id
     return chat_repo.paginate(session, user, browser_id, filters, params)
-
-
-class ChatOrigin(UUIDBaseModel):
-    origin: str
-
-@router.get("/chats/origins")
-def list_chat_origins(
-    session: SessionDep,
-    user: OptionalUserDep,
-    params: Params = Depends(),
-) -> Page[ChatOrigin]:
-    return paginate(
-        session,
-        select(Chat.origin, Chat.id).order_by(Chat.created_at.desc()),
-        params,
-        transformer=lambda items: [
-            ChatOrigin(
-                id=item.id,
-                origin=item.origin,
-            )
-            for item in items
-        ],
-    )
 
 
 @router.get("/chats/{chat_id}")
